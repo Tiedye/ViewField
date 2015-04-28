@@ -32,8 +32,12 @@ public class CellGrid extends Component {
     private int width;
     private int height;
 
-    private ArrayList<MonochromePointEmission> lights;
-    private int currentLight;
+    private ArrayList<MonochromePointEmission> lOld;
+    private int currentLightOld;
+    
+    private HashSet<MonochromePointEmission> lights;
+    private HashSet<MonochromePointEmission> unrenderedLights;
+    
 
     public CellGrid(int width, int height, double scale) {
         this.scale = scale;
@@ -44,8 +48,8 @@ public class CellGrid extends Component {
         opaqueCells = new HashSet<>();
         baseGrid = new double[width + 2][height + 2];
         activeGrid = new double[width + 2][height + 2];
-        lights = new ArrayList<>();
-        currentLight = 0;
+        lOld = new ArrayList<>();
+        currentLightOld = 0;
 
     }
 
@@ -77,12 +81,25 @@ public class CellGrid extends Component {
     }
 
     public void addLight(MonochromePointEmission light) {
-        lights.add(light);
+        lOld.add(light);
     }
-
-    public void calulateCells() {
-        for (; currentLight < lights.size(); currentLight++) {
-            MonochromePointEmission light = lights.get(currentLight);
+    
+    public void reRenderScene(){
+        // reset the grid
+        // reset the rendered lights
+        renderRemainingScene();
+    }
+    
+    public void renderRemainingScene(){
+    }
+    
+    private void renderLight(MonochromePointEmission light) {
+        
+    }
+    
+    public void calculateCells() {
+        for (; currentLightOld < lOld.size(); currentLightOld++) {
+            MonochromePointEmission light = lOld.get(currentLightOld);
 
             HashSet<Vec2i> lightFill = new HashSet<>();
 
@@ -222,12 +239,12 @@ public class CellGrid extends Component {
     }
 
     public void reCalculateCells() {
-        currentLight = 0;
+        currentLightOld = 0;
         activeGrid = new double[width][height];
         /*for (int i = 0; i < width; i++) {
             System.arraycopy(baseGrid[i], 0, activeGrid[i], 0, height);
         }*/
-        calulateCells();
+        calculateCells();
     }
     
     @Override
