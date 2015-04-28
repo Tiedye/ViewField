@@ -23,9 +23,10 @@ public class Main extends JPanel {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        CellGrid grid = new CellGrid(200, 200, 3.0);
+        CellGrid grid = new CellGrid(20, 20, 30.0);
         MonochromePointEmission light = new MonochromePointEmission(new Vec2d(5, 5), 1);
         grid.addLight(light);
+        grid.addLight(new MonochromePointEmission(new Vec2d(3, 3), 1));
         /*grid.setSolid(new Vec2i(30, 30));
         grid.setSolid(new Vec2i(30, 31));
         grid.setSolid(new Vec2i(30, 32));*/
@@ -43,7 +44,7 @@ public class Main extends JPanel {
 
             @Override
             public void mouseMoved(MouseEvent e) {
-                light.position = new Vec2d(e.getX()/grid.scale, e.getY()/grid.scale).sum(new Vec2d(0.5, -1.0));
+                light.position = new Vec2d(e.getX()/grid.scale, e.getY()/grid.scale).sum(new Vec2d(0.5, 0.0));
                 grid.reCalculateCells();
                 f.repaint();
             }
@@ -53,7 +54,7 @@ public class Main extends JPanel {
 
             @Override
             public void mouseClicked(MouseEvent e) {
-                grid.toggleCell(new Vec2d(e.getX()/grid.scale, e.getY()/grid.scale).sum(new Vec2d(-0.5, -2.0)).toVec2i());
+                grid.toggleCell(new Vec2d(e.getX()/grid.scale, e.getY()/grid.scale).sum(new Vec2d(-0.5, -1.0)).toVec2i());
                 f.repaint();
             }
         

@@ -214,7 +214,7 @@ public class CellGrid extends Component {
             }
             
             for (Vec2i p:lightFill) {
-                activeGrid[p.x][p.y] += light.intensity/Math.sqrt(p.toVec2d().diff(light.position).magnitude());
+                activeGrid[p.x][p.y] += light.intensity/p.toVec2d().diff(light.position).magnitude();
                 //activeGrid[p.x][p.y] += light.intensity;
             }
             
@@ -247,7 +247,7 @@ public class CellGrid extends Component {
         for (int y = 0; y < height - 2; y++){
             for (int x = 0; x < width - 2; x++) {
                 try {
-                g.setColor(new Color((float)activeGrid[x+1][y+1], (float)activeGrid[x+1][y+1], (float)activeGrid[x+1][y+1]));
+                g.setColor(new Color((float)Math.sqrt(activeGrid[x+1][y+1]), (float)Math.sqrt(activeGrid[x+1][y+1]), (float)Math.sqrt(activeGrid[x+1][y+1])));
                 } catch (RuntimeException e) {
                     g.setColor(Color.white);
                 }
