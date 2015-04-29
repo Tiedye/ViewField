@@ -10,7 +10,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.HashSet;
 import net.dtw.util.AABBi;
 import net.dtw.util.GridUtils;
@@ -23,7 +22,6 @@ import net.dtw.util.Vec2i;
 public class CellGrid extends Component {
 
     private HashSet<Vec2i> opaqueCells;
-    private double[][] baseGrid;
     private double[][] activeGrid;
 
     public double scale;
@@ -33,12 +31,8 @@ public class CellGrid extends Component {
     private int width;
     private int height;
 
-    private ArrayList<MonochromePointEmission> lOld;
-    private int currentLightOld;
-
     private HashSet<MonochromePointEmission> lights;
     private HashSet<MonochromePointEmission> unrenderedLights;
-
 
     public CellGrid(int width, int height, double scale) {
         this.scale = scale;
@@ -47,10 +41,9 @@ public class CellGrid extends Component {
         this.height = height + 2;
         bounds = new AABBi(height + 1, 1, width + 1, 1);
         opaqueCells = new HashSet<>();
-        baseGrid = new double[width + 2][height + 2];
         activeGrid = new double[width + 2][height + 2];
-        lOld = new ArrayList<>();
-        currentLightOld = 0;
+        lights = new HashSet<>();
+        unrenderedLights = new HashSet<>();
 
     }
 
@@ -76,16 +69,17 @@ public class CellGrid extends Component {
     public void toggleCell(Vec2i p) {
         if (opaqueCells.contains(p.add(1, 1))) {
             opaqueCells.remove(p.add(1, 1));
-        }else{
+        } else {
             opaqueCells.add(p.add(1, 1));
         }
     }
 
     public void addLight(MonochromePointEmission light) {
         lights.add(light);
+        unrenderedLights.add(light);
     }
 
-    public void reRenderScene(){
+    public void reRenderScene() {
         // reset the grid
         // reset the rendered lights
         activeGrid = new double[width][height];
@@ -94,24 +88,24 @@ public class CellGrid extends Component {
         renderRemainingScene();
     }
 
-    public void renderRemainingScene(){
-        for(MonochromePointEmission light: unrenderedLights){
+    public void renderRemainingScene() {
+        for (MonochromePointEmission light : unrenderedLights) {
             renderLight(light);
         }
     }
 
-    private enum CellState {
-        EMPTY,
-        LIT,
-        SRAY,
-        ERAY
-    }
+    private static final int CELLSTATE_EMPTY = 0;
+    private static final int CELLSTATE_LIT = 1;
+    private static final int CELLSTATE_ERAY = 2;
+    private static final int CELLSTATE_SRAY = 4;
 
     private void renderLight(MonochromePointEmission light) {
 
-        CellState[][] cells = new CellState[width][height];
-        Double[][] slopeGrid = new Double[width][height];
-        Double[][] slopeOverflowGrid = new Double[width][height];
+        int[][] cells = new int[width][height];
+        Double[][] sSlopeGrid = new Double[width][height];
+        Double[][] sSlopeOverflowGrid = new Double[width][height];
+        Double[][] eSlopeGrid = new Double[width][height];
+        Double[][] eSlopeOverflowGrid = new Double[width][height];
 
         Vec2i dV = new Vec2i(-1, 1); // quadrant vector
         //  \     |     /
@@ -124,7 +118,7 @@ public class CellGrid extends Component {
 
         for (int i = 0; i < 4; i++) {
             // dV is the quadrant vector
-            dV = dV.rotate(Math.PI/2);
+            dV = dV.rotate(Math.PI / 2);
 
             Vec2i sC = new Vec2i((int) light.position.x, (int) light.position.y); // quadrant corner (start cell)
             if ((double) sC.x == light.position.x && dV.x == -1) {
@@ -134,97 +128,126 @@ public class CellGrid extends Component {
                 sC.y--;
             }
 
-            AABBi bound = bounds.intersect(bounds.translate(sC));
-
+            //AABBi bound = bounds.intersect(bounds.translate(sC.sum(new Vec2i(-1, -1))));
             ArrayDeque<Vec2i> evaluationQueue = new ArrayDeque<>();
-            evaluationQueue.add(sC.copy());
+            Vec2i cI = sC.copy();
+            GridUtils.orItem(cells, cI, CELLSTATE_SRAY);
+            evaluationQueue.add(cI);
+            GridUtils.setItem(sSlopeGrid, cI, 0.0);
+            GridUtils.setItem(sSlopeOverflowGrid, cI, 0.0);
 
             while (!evaluationQueue.isEmpty()) {
                 Vec2i cell = evaluationQueue.remove();
 
-                while (bound.inBounds(cell)) {
-                    CellState state = GridUtils.getItem(cells, cell);
+                if (!bounds.inBounds(cell)) {
+                    break;
+                }
+
+                while (bounds.inBounds(cell)) {
+                    int state = GridUtils.getItem(cells, cell);
                     Vec2i cTY = cell.sum(dV.projectY());
                     Vec2i cTX = cell.sum(dV.projectX());
                     Vec2i cRX = cell.sum(dV.reflectX());
                     Vec2i cTV = cell.sum(dV);
-                    cell.add(0, 1);
-                    if (opaqueCells.contains(cell)){
+                    GridUtils.orItem(cells, cell, CELLSTATE_LIT); // state == null is equivalent to cell state = EMPTY
+                    if (opaqueCells.contains(cell)) {
                         // if the cell is opaque try to create new eRay
-                        if (state != CellState.SRAY && !opaqueCells.contains(cTX) && !opaqueCells.contains(cRX)) {
+                        if ((state & CELLSTATE_SRAY) == 0 && !opaqueCells.contains(cTX) && !opaqueCells.contains(cRX)) {
                             // if the cell is an sRay, then we're done
-                            GridUtils.setItem(cells, cTX, CellState.ERAY);
-                            double slope = (cTX.y + (dV.y == -1? 1 : 0) - light.position.y) / (cTX.x + (dV.x == -1 ? 1 : 0) - light.position.x);
-                            GridUtils.setItem(slopeGrid, cTX, slope);
-                            GridUtils.setItem(slopeOverflowGrid, cTX, slope);
+                            GridUtils.orItem(cells, cTX, CELLSTATE_ERAY);
+                            double slope = (cTX.y + (dV.y == -1 ? 1 : 0) - light.position.y) / (cTX.x + (dV.x == -1 ? 1 : 0) - light.position.x);
+                            GridUtils.setItem(eSlopeGrid, cTX, slope);
+                            GridUtils.setItem(eSlopeOverflowGrid, cTX, slope);
                         }
                         break;
                     } else {
-                        if (state == CellState.EMPTY) GridUtils.setItem(cells, cell, CellState.LIT);
-                        if (state != CellState.SRAY) {
-                            // if this isnt in a sRay, try to create new sRays
-                            if (!opaqueCells.contains(cTX) && opaqueCells.contains(cRX)) {
-                                GridUtils.setItem(cells, cTX, CellState.SRAY);
+                        if ((state & CELLSTATE_SRAY) != 0) {
+                            // extend sRays
+                            double slope = GridUtils.getItem(sSlopeGrid, cell);
+                            double slopeOverflow = GridUtils.getItem(sSlopeOverflowGrid, cell);
+                            if (Math.abs(slopeOverflow) > 1.0) {
+                                GridUtils.setItem(sSlopeGrid, cTY, slope);
+                                GridUtils.setItem(sSlopeOverflowGrid, cTY, slopeOverflow - dV.y * dV.x);
+                                GridUtils.orItem(cells, cTY, CELLSTATE_SRAY);
+                            } else if (Math.abs(slopeOverflow) < 1.0) {
+                                GridUtils.setItem(sSlopeGrid, cTX, slope);
+                                GridUtils.setItem(sSlopeOverflowGrid, cTX, slopeOverflow + slope);
+                                GridUtils.orItem(cells, cTX, CELLSTATE_SRAY);
                                 evaluationQueue.add(cTX);
-                                double slope = (cTX.y + (dV.y == -1? 1 : 0) - light.position.y) / (cTX.x + (dV.x == -1 ? 1 : 0) - light.position.x);
-                                GridUtils.setItem(slopeGrid, cTX, slope);
-                                GridUtils.setItem(slopeOverflowGrid, cTX, slope);
+                            } else if (Math.abs(slopeOverflow) == 1.0) {
+                                // genetated by this stucture
+                                // .....*00000
+                                // ...../00000
+                                // ..../000000
+                                // ....*000000
+                                // ....*000000
+                                if (!opaqueCells.contains(cTY) && !opaqueCells.contains(cTV)) {
+                                    GridUtils.setItem(sSlopeGrid, cTV, slope);
+                                    GridUtils.setItem(sSlopeOverflowGrid, cTV, slope);
+                                    GridUtils.orItem(cells, cTV, CELLSTATE_SRAY);
+                                    evaluationQueue.add(cTV);
+                                }
                             }
                         }
-                        if (state != CellState.LIT) {
-                            // extend rays
-                            double slope = GridUtils.getItem(slopeGrid, cell);
-                            double slopeOverflow = GridUtils.getItem(slopeOverflowGrid, cell);
+                        if ((state & CELLSTATE_ERAY) != 0) {
+                            // extend eRays
+                            double slope = GridUtils.getItem(eSlopeGrid, cell);
+                            double slopeOverflow = GridUtils.getItem(eSlopeOverflowGrid, cell);
                             if (Math.abs(slopeOverflow) > 1.0) {
-                                GridUtils.setItem(slopeGrid, cTY, slope);
-                                GridUtils.setItem(slopeOverflowGrid, cTY, slopeOverflow - 1);
-                                GridUtils.setItem(cells, cTY, state);
+                                GridUtils.setItem(eSlopeGrid, cTY, slope);
+                                GridUtils.setItem(eSlopeOverflowGrid, cTY, slopeOverflow - dV.y * dV.x);
+                                GridUtils.orItem(cells, cTY, CELLSTATE_ERAY);
                             } else if (Math.abs(slopeOverflow) < 1.0) {
-                                GridUtils.setItem(slopeGrid, cTX, slope);
-                                GridUtils.setItem(slopeOverflowGrid, cTX, slopeOverflow + slope);
-                                GridUtils.setItem(cells, cTX, state);
-                                if (state == CellState.SRAY) evaluationQueue.add(cTX);
+                                GridUtils.setItem(eSlopeGrid, cTX, slope);
+                                GridUtils.setItem(eSlopeOverflowGrid, cTX, slopeOverflow + slope);
+                                GridUtils.orItem(cells, cTX, CELLSTATE_ERAY);
                                 break;
                             } else if (Math.abs(slopeOverflow) == 1.0) {
-                                if (state == CellState.SRAY) {
-                                    // genetated by this stucture
-                                    // .....*00000
-                                    // ...../00000
-                                    // ..../000000
-                                    // ....*000000
-                                    // ....*000000
-                                    if (!opaqueCells.contains(cTY) && !opaqueCells.contains(cTV)) {
-                                        GridUtils.setItem(slopeGrid, cTV, slope);
-                                        GridUtils.setItem(slopeOverflowGrid, cTV, slope);
-                                        GridUtils.setItem(cells, cTV, state);
-                                        evaluationQueue.add(cTV);
-                                    }
-                                } else if (state == CellState.ERAY) {
-                                    // genetated by this stucture
-                                    // ...*0000000
-                                    // ...*0/*0000
-                                    // ...*/..0000
-                                    // .......0000
-                                    // .......0000
-                                    if (!opaqueCells.contains(cTX) && !opaqueCells.contains(cTV)) {
-                                        GridUtils.setItem(slopeGrid, cTV, slope);
-                                        GridUtils.setItem(slopeOverflowGrid, cTV, slope);
-                                        GridUtils.setItem(cells, cTV, state);
-                                    }
+                                // genetated by this stucture
+                                // ...*0000000
+                                // ...*0/*0000
+                                // ...*/..0000
+                                // .......0000
+                                // .......0000
+                                if (!opaqueCells.contains(cTX) && !opaqueCells.contains(cTV)) {
+                                    GridUtils.setItem(eSlopeGrid, cTV, slope);
+                                    GridUtils.setItem(eSlopeOverflowGrid, cTV, slope);
+                                    GridUtils.orItem(cells, cTV, CELLSTATE_ERAY);
+                                    break;
                                 }
-                                break;
+                            }
+                        }
+                        if ((state & CELLSTATE_SRAY) == 0) {
+                            // if this isnt in a sRay, try to create new sRays
+                            if (!opaqueCells.contains(cTX) && opaqueCells.contains(cRX)) {
+                                GridUtils.orItem(cells, cTX, CELLSTATE_SRAY);
+                                evaluationQueue.add(cTX);
+                                double slope = (cTX.y + (dV.y == -1 ? 1 : 0) - light.position.y) / (cTX.x + (dV.x == -1 ? 1 : 0) - light.position.x);
+                                GridUtils.setItem(sSlopeGrid, cTX, slope);
+                                GridUtils.setItem(sSlopeOverflowGrid, cTX, slope);
                             }
                         }
                     }
+                    cell.y += dV.y;
                 }
             }
         }
-        
+
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                if (cells[x][y] != CellState.EMPTY) {
+                if ((cells[x][y] & CELLSTATE_LIT) != 0) {
                     activeGrid[x][y] += light.intensity;
                 }
+                /*if ((cells[x][y] & CELLSTATE_ERAY) != 0) {
+                    activeGrid[x][y] += 0.3;
+                }
+                if ((cells[x][y] & CELLSTATE_SRAY) != 0) {
+                    activeGrid[x][y] += 0.6;
+                }
+                if ((cells[x][y] & CELLSTATE_LIT) != 0) {
+                    activeGrid[x][y] += 0.1;
+                }*/
+                
             }
         }
     }
@@ -232,9 +255,9 @@ public class CellGrid extends Component {
     @Override
     public String toString() {
         StringBuilder output = new StringBuilder();
-        for (int y = height - 1; y > 1; y--){
+        for (int y = height - 1; y > 1; y--) {
             for (int x = 1; x < width - 1; x++) {
-                output.append(activeGrid[x][y-1] > 0.0 ? "1 " : "0 ");
+                output.append(activeGrid[x][y - 1] > 0.0 ? "1 " : "0 ");
             }
             output.append('\n');
         }
@@ -243,23 +266,21 @@ public class CellGrid extends Component {
 
     @Override
     public void paint(Graphics g) {
-        for (int y = 0; y < height - 2; y++){
+        for (int y = 0; y < height - 2; y++) {
             for (int x = 0; x < width - 2; x++) {
                 try {
-                g.setColor(new Color((float)Math.sqrt(activeGrid[x+1][y+1]), (float)Math.sqrt(activeGrid[x+1][y+1]), (float)Math.sqrt(activeGrid[x+1][y+1])));
+                    g.setColor(new Color(opaqueCells.contains(new Vec2i(x + 1, y + 1)) ? 0.5f : (float) activeGrid[x + 1][y + 1], (float) activeGrid[x + 1][y + 1], (float) activeGrid[x + 1][y + 1]));
                 } catch (RuntimeException e) {
                     g.setColor(Color.white);
                 }
-                g.fillRect((int)(x*scale), (int)(y*scale), (int)scale, (int)scale);
+                g.fillRect((int) (x * scale), (int) (y * scale), (int) scale, (int) scale);
             }
         }
     }
 
     @Override
     public Dimension getPreferredSize() {
-        return new Dimension((int)((width-2)*scale), (int)((height-2)*scale));
+        return new Dimension((int) ((width - 2) * scale), (int) ((height - 2) * scale));
     }
-
-
 
 }
