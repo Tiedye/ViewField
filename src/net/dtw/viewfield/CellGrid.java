@@ -13,6 +13,7 @@ import java.util.ArrayDeque;
 import java.util.HashSet;
 import net.dtw.util.AABBi;
 import net.dtw.util.GridUtils;
+import net.dtw.util.Vec2d;
 import net.dtw.util.Vec2i;
 
 /**
@@ -149,7 +150,6 @@ public class CellGrid extends Component {
                     Vec2i cTX = cell.sum(dV.projectX());
                     Vec2i cRX = cell.sum(dV.reflectX());
                     Vec2i cTV = cell.sum(dV);
-                    GridUtils.orItem(cells, cell, CELLSTATE_LIT); // state == null is equivalent to cell state = EMPTY
                     if (opaqueCells.contains(cell)) {
                         // if the cell is opaque try to create new eRay
                         if ((state & CELLSTATE_SRAY) == 0 && !opaqueCells.contains(cTX) && !opaqueCells.contains(cRX)) {
@@ -161,6 +161,7 @@ public class CellGrid extends Component {
                         }
                         break;
                     } else {
+                        GridUtils.orItem(cells, cell, CELLSTATE_LIT);
                         if ((state & CELLSTATE_SRAY) != 0) {
                             // extend sRays
                             double slope = GridUtils.getItem(sSlopeGrid, cell);
@@ -236,10 +237,10 @@ public class CellGrid extends Component {
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 if ((cells[x][y] & CELLSTATE_LIT) != 0) {
-                    activeGrid[x][y] += light.intensity;
+                    activeGrid[x][y] += light.intensity/light.position.diff(new Vec2d(x, y)).magnitude();
                 }
                 /*if ((cells[x][y] & CELLSTATE_ERAY) != 0) {
-                    activeGrid[x][y] += 0.3;
+                    activeGrid[x][y] += 0.2;
                 }
                 if ((cells[x][y] & CELLSTATE_SRAY) != 0) {
                     activeGrid[x][y] += 0.6;
@@ -269,7 +270,9 @@ public class CellGrid extends Component {
         for (int y = 0; y < height - 2; y++) {
             for (int x = 0; x < width - 2; x++) {
                 try {
-                    g.setColor(new Color(opaqueCells.contains(new Vec2i(x + 1, y + 1)) ? 0.5f : (float) activeGrid[x + 1][y + 1], (float) activeGrid[x + 1][y + 1], (float) activeGrid[x + 1][y + 1]));
+                    //g.setColor(new Color(0.0f, (activeGrid[x + 1][y + 1] * 10) % 2 > 0.5 ? 0.5f : 0.0f, (float) activeGrid[x + 1][y + 1]));
+                    float intensity = (float) Math.sqrt(activeGrid[x + 1][y + 1]);
+                    g.setColor(new Color(opaqueCells.contains(new Vec2i(x + 1, y + 1)) ? 0.5f : intensity, intensity, intensity));
                 } catch (RuntimeException e) {
                     g.setColor(Color.white);
                 }

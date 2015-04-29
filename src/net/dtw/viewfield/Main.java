@@ -23,16 +23,21 @@ public class Main extends JPanel {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        CellGrid grid = new CellGrid(200, 200, 3.0);
+        CellGrid grid = new CellGrid(60, 40, 15.0);
         MonochromePointEmission light = new MonochromePointEmission(new Vec2d(5, 5), 0.2);
         grid.addLight(light);
         //grid.addLight(new MonochromePointEmission(new Vec2d(5.5, 17.5), 1));
         /*grid.setSolid(new Vec2i(30, 30));
         grid.setSolid(new Vec2i(30, 31));
         grid.setSolid(new Vec2i(30, 32));*/
-        grid.setSolid(new Vec2i(9, 9));
-        grid.setSolid(new Vec2i(9, 10));
-        grid.setSolid(new Vec2i(9, 11));
+        for (int x = 2; x < 38; x++) {
+            grid.setSolid(new Vec2i(x, 2));
+            grid.setSolid(new Vec2i(x, 37));
+        }
+        for (int y = 3; y < 37; y++) {
+            grid.setSolid(new Vec2i(2, y));
+            grid.setSolid(new Vec2i(37, y));
+        }
         grid.reRenderScene();
         JFrame f = new JFrame("Jumbled Image");
         f.addWindowListener(new WindowAdapter() {
@@ -53,13 +58,11 @@ public class Main extends JPanel {
             public void mouseDragged(MouseEvent e) {
                 if (e.isControlDown()) {
                     grid.setEmpty(new Vec2d(e.getX()/grid.scale, e.getY()/grid.scale).toVec2i());
-                    grid.reRenderScene();
-                    f.repaint();
                 }else {
                     grid.setSolid(new Vec2d(e.getX()/grid.scale, e.getY()/grid.scale).toVec2i());
-                    grid.reRenderScene();
-                    f.repaint();
                 }
+                grid.reRenderScene();
+                f.repaint();
             }
             
             
