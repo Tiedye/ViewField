@@ -41,4 +41,20 @@ public class AABBi {
         return new AABBi(top + v.y, bottom + v.y, right + v.x, left + v.x);
     }
     
+    public AABBi expand(Vec2i v){
+        return new AABBi(v.y > 0 ? top + v.y : top, v.y < 0 ? bottom + v.y : bottom, v.x > 0 ? right + v.x : right, v.x < 0 ? left + v.x : left);
+    }
+    
+    public AABBi expand(int top, int bottom, int right, int left){
+        return new AABBi(this.top + top, this.bottom + bottom, this.right + right, this.left + left);
+    }
+    
+    public int getWidth(){
+        return right - left;
+    }
+    
+    public int getHeight(){
+        return top - bottom;
+    }
+    
 }
