@@ -23,24 +23,25 @@ public class Main extends JPanel {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        CellGrid grid = new CellGrid(60, 40, 15.0);
+        CellGrid grid = new CellGrid(75, 50, 15.0);
         MonochromePointEmission light = new MonochromePointEmission(new Vec2d(5, 5), 0.2);
         grid.addLight(light);
         //grid.addLight(new MonochromePointEmission(new Vec2d(5.5, 17.5), 1));
         /*grid.setSolid(new Vec2i(30, 30));
         grid.setSolid(new Vec2i(30, 31));
         grid.setSolid(new Vec2i(30, 32));*/
-        for (int x = 2; x < 38; x++) {
+        /*for (int x = 2; x < 38; x++) {
             grid.setSolid(new Vec2i(x, 2));
             grid.setSolid(new Vec2i(x, 37));
         }
         for (int y = 3; y < 37; y++) {
             grid.setSolid(new Vec2i(2, y));
             grid.setSolid(new Vec2i(37, y));
-        }
+        }*/
         grid.reRenderScene();
         JFrame f = new JFrame("Jumbled Image");
         f.addWindowListener(new WindowAdapter() {
+            @Override
             public void windowClosing(WindowEvent e) {System.exit(0);}
         });
         f.add("Center", grid);
