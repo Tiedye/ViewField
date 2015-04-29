@@ -15,17 +15,30 @@ public class AABBi {
     private int bottom;
     private int right;
     private int left;
+    
+    private boolean zero;
 
     public AABBi(int top, int bottom, int right, int left) {
-        if (top < bottom || right < left) throw new IllegalArgumentException("That's not possible.");
-        this.top = top;
-        this.bottom = bottom;
-        this.right = right;
-        this.left = left;
+        if (top < bottom || right < left) zero = true;
+        else {
+            this.top = top;
+            this.bottom = bottom;
+            this.right = right;
+            this.left = left;
+        }
     }
     
     public boolean inBounds(Vec2i p) {
+        if (zero) return false;
         return top > p.y && bottom <= p.y && right > p.x && left <= p.x;
+    }
+    
+    public AABBi intersect (AABBi ab) {
+        return new AABBi(top < ab.top ? top : ab.top, bottom > ab.bottom ? bottom : ab.bottom, right < ab.right ? right : ab.right, left > ab.left ? left : ab.left);
+    }
+    
+    public AABBi translate(Vec2i v){
+        return new AABBi(top + v.y, bottom + v.y, right + v.x, left + v.x);
     }
     
 }

@@ -13,6 +13,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import net.dtw.util.AABBi;
+import net.dtw.util.GridUtils;
 import net.dtw.util.Vec2i;
 
 /**
@@ -24,7 +25,7 @@ public class CellGrid extends Component {
     private HashSet<Vec2i> opaqueCells;
     private double[][] baseGrid;
     private double[][] activeGrid;
-    
+
     public double scale;
 
     private AABBi bounds;
@@ -34,10 +35,10 @@ public class CellGrid extends Component {
 
     private ArrayList<MonochromePointEmission> lOld;
     private int currentLightOld;
-    
+
     private HashSet<MonochromePointEmission> lights;
     private HashSet<MonochromePointEmission> unrenderedLights;
-    
+
 
     public CellGrid(int width, int height, double scale) {
         this.scale = scale;
@@ -71,7 +72,7 @@ public class CellGrid extends Component {
     public void setEmpty(Vec2i p) {
         opaqueCells.remove(p.add(1, 1));
     }
-    
+
     public void toggleCell(Vec2i p) {
         if (opaqueCells.contains(p.add(1, 1))) {
             opaqueCells.remove(p.add(1, 1));
@@ -81,172 +82,153 @@ public class CellGrid extends Component {
     }
 
     public void addLight(MonochromePointEmission light) {
-        lOld.add(light);
+        lights.add(light);
     }
-    
+
     public void reRenderScene(){
         // reset the grid
         // reset the rendered lights
+        activeGrid = new double[width][height];
+        unrenderedLights = new HashSet<>();
+        unrenderedLights.addAll(lights);
         renderRemainingScene();
     }
-    
+
     public void renderRemainingScene(){
-    }
-    
-    private void renderLight(MonochromePointEmission light) {
-        
-    }
-    
-    public void calculateCells() {
-        for (; currentLightOld < lOld.size(); currentLightOld++) {
-            MonochromePointEmission light = lOld.get(currentLightOld);
-
-            HashSet<Vec2i> lightFill = new HashSet<>();
-
-            Vec2i dV = new Vec2i(-1, 1); // direction vector
-
-            // fill specs
-            ArrayDeque<Vec2i> sFillQueue = new ArrayDeque<>();
-            HashSet<Vec2i> eFillCells = new HashSet<>(width);
-
-            for (int i = 0; i < 4; i++) {
-                // dV is the quadrant vector
-                dV = dV.rotate(Math.PI/2);
-
-                // ray start specs
-                ArrayDeque<Vec2i> sRayQueue = new ArrayDeque<>();
-                ArrayDeque<Vec2i> eRayQueue = new ArrayDeque<>();
-                
-                //  \     |     /
-                //    3   |   0
-                //      \ | /
-                // ----------------
-                //      / | \
-                //    2   |   1
-                //  /     |     \
-                
-                Vec2i sC = new Vec2i((int) light.position.x, (int) light.position.y); // quadrant corner (start cell)
-                if ((double) sC.x == light.position.x && dV.x == -1) {
-                    sC.x--;
-                }
-                if ((double) sC.y == light.position.y && dV.y == -1) {
-                    sC.y--;
-                }
-                // Math floor round to negative infinity, this rounds to zero
-                
-                
-                for (Vec2i p = sC.copy(); bounds.inBounds(p); p.x += dV.x) {
-                    if (!opaqueCells.contains(p)) {
-                        sFillQueue.offer(p.copy());
-                    } else {
-                        break;
-                    }
-                }
-                while (!sFillQueue.isEmpty()) {
-                    // do fill
-                    int stopRow = 0;
-                    ArrayDeque<Vec2i> nextSFillQueue = new ArrayDeque<>();
-                    while (!sFillQueue.isEmpty()) {
-                        for (Vec2i fillPoint = sFillQueue.poll(); bounds.inBounds(fillPoint); fillPoint.y += dV.y) {
-                            if (!opaqueCells.contains(fillPoint)) {
-                                if (fillPoint.y == stopRow) {
-                                    nextSFillQueue.offer(fillPoint.copy());
-                                    break;
-                                }
-                                if (eFillCells.contains(fillPoint)) {
-                                    lightFill.add(fillPoint.copy());
-                                    break;
-                                }
-                                if (opaqueCells.contains(fillPoint.sum(dV.projectX()))) {
-                                    if (!opaqueCells.contains(fillPoint.sum(dV)) && !opaqueCells.contains(fillPoint.sum(dV.projectY()))) {
-                                        sRayQueue.offer(fillPoint.sum(dV));
-                                    }
-                                }else if(opaqueCells.contains(fillPoint.sum(dV.projectY()))) {
-                                    if (!opaqueCells.contains(fillPoint.sum(dV)) && !opaqueCells.contains(fillPoint.sum(dV.projectX()))) {
-                                        eRayQueue.offer(fillPoint.sum(dV));
-                                    }
-                                }
-                                lightFill.add(fillPoint.copy());
-                            } else {
-                                stopRow = fillPoint.y;
-                                break;
-                            }
-                        }
-                    }
-                    sFillQueue = nextSFillQueue;
-                    // do ray tracing
-                    while (!sRayQueue.isEmpty()) {
-                        Vec2i sRay = sRayQueue.poll(); 
-                        double slope = (sRay.y + (dV.y == -1? 1 : 0) - light.position.y) / (sRay.x + (dV.x == -1 ? 1 : 0) - light.position.x);
-                        double slopeOverflow = slope;
-                        outer: while (bounds.inBounds(sRay)) {
-                            if (!opaqueCells.contains(sRay)) {
-                                sFillQueue.offer(sRay.copy());
-                            } else {
-                                break;
-                            }
-                            if (Math.abs(slopeOverflow) > height) break;
-                            while(Math.abs(slopeOverflow) > 1) {
-                                if (opaqueCells.contains(sRay)) break outer;
-                                sRay = sRay.sum(dV.projectY());
-                                slopeOverflow -= dV.x * dV.y;
-                            } 
-                            if (Math.abs(slopeOverflow) == 1.0){
-                                if (opaqueCells.contains(sRay.sum(dV.projectY())) || opaqueCells.contains(sRay.sum(dV.projectX()))) break;
-                                sRay = sRay.sum(dV);
-                                slopeOverflow = slope;
-                            } else {
-                                sRay = sRay.sum(dV.projectX());
-                                slopeOverflow += slope;
-                            }
-                        }
-                    }
-                    while (!eRayQueue.isEmpty()) {
-                        Vec2i eRay = eRayQueue.poll(); 
-                        double slope = (eRay.y + (dV.y == -1? 1 : 0) - light.position.y) / (eRay.x + (dV.x == -1 ? 1 : 0) - light.position.x);
-                        double slopeOverflow = slope;
-                        outer: while (bounds.inBounds(eRay)) {
-                            if (Math.abs(slopeOverflow) > height) break;
-                            while(Math.abs(slopeOverflow) > 1) {
-                                if (opaqueCells.contains(eRay)) break outer;
-                                eRay = eRay.sum(dV.projectY());
-                                slopeOverflow -= dV.x * dV.y;
-                            } 
-                            if (!opaqueCells.contains(eRay)) {
-                                eFillCells.add(eRay.copy());
-                            } else {
-                                break;
-                            }
-                            if (Math.abs(slopeOverflow) == 1.0){
-                                if (opaqueCells.contains(eRay.sum(dV.projectY())) || opaqueCells.contains(eRay.sum(dV.projectX()))) break;
-                                eRay = eRay.sum(dV);
-                                slopeOverflow = slope;
-                            } else {
-                                eRay = eRay.sum(dV.projectX());
-                                slopeOverflow += slope;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            for (Vec2i p:lightFill) {
-                activeGrid[p.x][p.y] += light.intensity/p.toVec2d().diff(light.position).magnitude();
-                //activeGrid[p.x][p.y] += light.intensity;
-            }
-            
+        for(MonochromePointEmission light: unrenderedLights){
+            renderLight(light);
         }
     }
 
-    public void reCalculateCells() {
-        currentLightOld = 0;
-        activeGrid = new double[width][height];
-        /*for (int i = 0; i < width; i++) {
-            System.arraycopy(baseGrid[i], 0, activeGrid[i], 0, height);
-        }*/
-        calculateCells();
+    private enum CellState {
+        EMPTY,
+        LIT,
+        SRAY,
+        ERAY
     }
-    
+
+    private void renderLight(MonochromePointEmission light) {
+
+        CellState[][] cells = new CellState[width][height];
+        Double[][] slopeGrid = new Double[width][height];
+        Double[][] slopeOverflowGrid = new Double[width][height];
+
+        Vec2i dV = new Vec2i(-1, 1); // quadrant vector
+        //  \     |     /
+        //    3   |   0
+        //      \ | /
+        // ----------------
+        //      / | \
+        //    2   |   1
+        //  /     |     \
+
+        for (int i = 0; i < 4; i++) {
+            // dV is the quadrant vector
+            dV = dV.rotate(Math.PI/2);
+
+            Vec2i sC = new Vec2i((int) light.position.x, (int) light.position.y); // quadrant corner (start cell)
+            if ((double) sC.x == light.position.x && dV.x == -1) {
+                sC.x--;
+            }
+            if ((double) sC.y == light.position.y && dV.y == -1) {
+                sC.y--;
+            }
+
+            AABBi bound = bounds.intersect(bounds.translate(sC));
+
+            ArrayDeque<Vec2i> evaluationQueue = new ArrayDeque<>();
+            evaluationQueue.add(sC.copy());
+
+            while (!evaluationQueue.isEmpty()) {
+                Vec2i cell = evaluationQueue.remove();
+
+                while (bound.inBounds(cell)) {
+                    CellState state = GridUtils.getItem(cells, cell);
+                    Vec2i cTY = cell.sum(dV.projectY());
+                    Vec2i cTX = cell.sum(dV.projectX());
+                    Vec2i cRX = cell.sum(dV.reflectX());
+                    Vec2i cTV = cell.sum(dV);
+                    cell.add(0, 1);
+                    if (opaqueCells.contains(cell)){
+                        // if the cell is opaque try to create new eRay
+                        if (state != CellState.SRAY && !opaqueCells.contains(cTX) && !opaqueCells.contains(cRX)) {
+                            // if the cell is an sRay, then we're done
+                            GridUtils.setItem(cells, cTX, CellState.ERAY);
+                            double slope = (cTX.y + (dV.y == -1? 1 : 0) - light.position.y) / (cTX.x + (dV.x == -1 ? 1 : 0) - light.position.x);
+                            GridUtils.setItem(slopeGrid, cTX, slope);
+                            GridUtils.setItem(slopeOverflowGrid, cTX, slope);
+                        }
+                        break;
+                    } else {
+                        if (state == CellState.EMPTY) GridUtils.setItem(cells, cell, CellState.LIT);
+                        if (state != CellState.SRAY) {
+                            // if this isnt in a sRay, try to create new sRays
+                            if (!opaqueCells.contains(cTX) && opaqueCells.contains(cRX)) {
+                                GridUtils.setItem(cells, cTX, CellState.SRAY);
+                                evaluationQueue.add(cTX);
+                                double slope = (cTX.y + (dV.y == -1? 1 : 0) - light.position.y) / (cTX.x + (dV.x == -1 ? 1 : 0) - light.position.x);
+                                GridUtils.setItem(slopeGrid, cTX, slope);
+                                GridUtils.setItem(slopeOverflowGrid, cTX, slope);
+                            }
+                        }
+                        if (state != CellState.LIT) {
+                            // extend rays
+                            double slope = GridUtils.getItem(slopeGrid, cell);
+                            double slopeOverflow = GridUtils.getItem(slopeOverflowGrid, cell);
+                            if (Math.abs(slopeOverflow) > 1.0) {
+                                GridUtils.setItem(slopeGrid, cTY, slope);
+                                GridUtils.setItem(slopeOverflowGrid, cTY, slopeOverflow - 1);
+                                GridUtils.setItem(cells, cTY, state);
+                            } else if (Math.abs(slopeOverflow) < 1.0) {
+                                GridUtils.setItem(slopeGrid, cTX, slope);
+                                GridUtils.setItem(slopeOverflowGrid, cTX, slopeOverflow + slope);
+                                GridUtils.setItem(cells, cTX, state);
+                                if (state == CellState.SRAY) evaluationQueue.add(cTX);
+                                break;
+                            } else if (Math.abs(slopeOverflow) == 1.0) {
+                                if (state == CellState.SRAY) {
+                                    // genetated by this stucture
+                                    // .....*00000
+                                    // ...../00000
+                                    // ..../000000
+                                    // ....*000000
+                                    // ....*000000
+                                    if (!opaqueCells.contains(cTY) && !opaqueCells.contains(cTV)) {
+                                        GridUtils.setItem(slopeGrid, cTV, slope);
+                                        GridUtils.setItem(slopeOverflowGrid, cTV, slope);
+                                        GridUtils.setItem(cells, cTV, state);
+                                        evaluationQueue.add(cTV);
+                                    }
+                                } else if (state == CellState.ERAY) {
+                                    // genetated by this stucture
+                                    // ...*0000000
+                                    // ...*0/*0000
+                                    // ...*/..0000
+                                    // .......0000
+                                    // .......0000
+                                    if (!opaqueCells.contains(cTX) && !opaqueCells.contains(cTV)) {
+                                        GridUtils.setItem(slopeGrid, cTV, slope);
+                                        GridUtils.setItem(slopeOverflowGrid, cTV, slope);
+                                        GridUtils.setItem(cells, cTV, state);
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                if (cells[x][y] != CellState.EMPTY) {
+                    activeGrid[x][y] += light.intensity;
+                }
+            }
+        }
+    }
+
     @Override
     public String toString() {
         StringBuilder output = new StringBuilder();
@@ -277,7 +259,7 @@ public class CellGrid extends Component {
     public Dimension getPreferredSize() {
         return new Dimension((int)((width-2)*scale), (int)((height-2)*scale));
     }
-    
-    
+
+
 
 }

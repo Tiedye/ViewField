@@ -55,6 +55,18 @@ public class Vec2i {
         return new Vec2i(0, y);
     }
     
+    public Vec2i reflect(Vec2i v) {
+        throw new Error("Not yet implemented.");
+    }
+    
+    public Vec2i reflectX() {
+        return new Vec2i(x, -y);
+    }
+    
+    public Vec2i reflectY() {
+        return new Vec2i(-x, y);
+    }
+    
     public double magnitude() {
         return Math.hypot(x, y);
     }
