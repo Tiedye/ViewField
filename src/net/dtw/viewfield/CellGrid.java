@@ -129,6 +129,10 @@ public class CellGrid extends Component {
                 sC.y--;
             }
 
+            if (!bounds.inBounds(sC)) {
+                break;
+            }
+
             //AABBi bound = bounds.intersect(bounds.translate(sC.sum(new Vec2i(-1, -1))));
             ArrayDeque<Vec2i> evaluationQueue = new ArrayDeque<>();
             Vec2i cI = sC.copy();
