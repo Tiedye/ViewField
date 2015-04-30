@@ -17,11 +17,23 @@ import net.dtw.util.Vec2i;
  * @author Daniel
  */
 public class MonochromePointEmission {
+    
+    private static final int Q1 = 3;
+    private static final int Q2 = 2;
+    private static final int Q3 = 0;
+    private static final int Q4 = 1;
+    
+    private static final Vec2i[] QDV = {new Vec2i(1, 1), new Vec2i(1, -1), new Vec2i(-1, -1), new Vec2i(-1, 1)};
+
+    private static final int CELLSTATE_EMPTY = 0;
+    private static final int CELLSTATE_LIT = 1;
+    private static final int CELLSTATE_ERAY = 2;
+    private static final int CELLSTATE_SRAY = 4;
 
     public Vec2d position;
     public double intensity;
     
-    AABBi bounds;
+    private AABBi bounds;
 
     private int[][] cells;
 
@@ -29,15 +41,22 @@ public class MonochromePointEmission {
     private Double[][] sSlopeOverflowGrid;
     private Double[][] eSlopeGrid;
     private Double[][] eSlopeOverflowGrid;
+    
+    private Double[] blankDoubleLine;
+    private int[] blankIntLine;
+    
+    private int renderAreaWidth;
+    private int renderAreaHeight;
+    
+    private final boolean[] qRendered;
 
-    private static final int CELLSTATE_EMPTY = 0;
-    private static final int CELLSTATE_LIT = 1;
-    private static final int CELLSTATE_ERAY = 2;
-    private static final int CELLSTATE_SRAY = 4;
-
+    private final ArrayDeque<Vec2i> evaluationQueue;
+    
     public MonochromePointEmission(Vec2d position, double intensity) {
         this.position = position;
         this.intensity = intensity;
+        qRendered = new boolean[4];
+        evaluationQueue = new ArrayDeque<>();
     }
 
     public MonochromePointEmission() {
@@ -47,15 +66,22 @@ public class MonochromePointEmission {
     public void setRenderBounds(AABBi bounds) {
         this.bounds = bounds;
         
-        cells = new int[bounds.getWidth()+2][bounds.getHeight()+2];
+        renderAreaWidth = bounds.getWidth()+2;
+        renderAreaHeight = bounds.getHeight()+2;
         
-        sSlopeGrid = new Double[bounds.getWidth()+2][bounds.getHeight()+2];
-        sSlopeOverflowGrid = new Double[bounds.getWidth()+2][bounds.getHeight()+2];
-        eSlopeGrid = new Double[bounds.getWidth()+2][bounds.getHeight()+2];
-        eSlopeOverflowGrid = new Double[bounds.getWidth()+2][bounds.getHeight()+2];
+        cells = new int[renderAreaWidth][renderAreaHeight];
+        
+        sSlopeGrid = new Double[renderAreaWidth][renderAreaHeight];
+        sSlopeOverflowGrid = new Double[renderAreaWidth][renderAreaHeight];
+        eSlopeGrid = new Double[renderAreaWidth][renderAreaHeight];
+        eSlopeOverflowGrid = new Double[renderAreaWidth][renderAreaHeight];
+        
+        blankDoubleLine = new Double[renderAreaHeight];
+        blankIntLine = new int[renderAreaHeight];
+        
     }
 
-    public void render(HashSet<Vec2i> opaqueCells, AABBi bounds) {
+    public void render(HashSet<Vec2i> opaqueCells) {
         Vec2i dV = new Vec2i(-1, 1); // quadrant vector
         //  \     |     /
         //    3   |   0
@@ -65,26 +91,58 @@ public class MonochromePointEmission {
         //    2   |   1
         //  /     |     \
 
-        AABBi fullField = bounds.expand(1, 1, 1, 1);
+        // clear all of the cells information holders
+        for (int x = 0; x < renderAreaWidth; x++) {
+            System.arraycopy(blankIntLine, 0, cells[x], 0, renderAreaHeight);
+            System.arraycopy(blankDoubleLine, 0, sSlopeGrid[x], 0, renderAreaHeight);
+            System.arraycopy(blankDoubleLine, 0, sSlopeOverflowGrid[x], 0, renderAreaHeight);
+            System.arraycopy(blankDoubleLine, 0, eSlopeGrid[x], 0, renderAreaHeight);
+            System.arraycopy(blankDoubleLine, 0, eSlopeOverflowGrid[x], 0, renderAreaHeight);
+        }        
         
-        for (int i = 0; i < 4; i++) {
-            // dV is the quadrant vector
-            dV = dV.rotate(Math.PI / 2);
-            renderQuadrant(dV, opaqueCells, bounds);
+        for (int q = Q1; q <= Q4; q++){
+            qRendered[q] = false;
+            renderQuadrant(q, opaqueCells);
         }
     }
 
-    public void renderQuadrant(Vec2i q, HashSet<Vec2i> opaqueCells, AABBi bounds) {
+    public void renderQuadrant(int q, HashSet<Vec2i> opaqueCells) {
+        
+        Vec2i dV = QDV[q];
+        
         Vec2i sC = new Vec2i((int) position.x, (int) position.y); // quadrant corner (start cell)
-        if ((double) sC.x == position.x && q.x == -1) {
+        if ((double) sC.x == position.x && dV.x == -1) {
             sC.x--;
         }
-        if ((double) sC.y == position.y && q.y == -1) {
+        if ((double) sC.y == position.y && dV.y == -1) {
             sC.y--;
         }
 
+        if (!bounds.inBounds(sC)) {
+            return;
+        }
+        
+        // TODO: investigate the effect of the lower row being rendered
+        if(qRendered[q]){
+            // clear that quadrant if it has been rendered
+            boolean pX = (q & 0b01) != 0;
+            boolean pY = (q & 0b10) != 0;
+            int x = pX ? sC.x : 0;
+            int y = pY ? sC.y : 0;
+            int xe = (pX ? renderAreaWidth - x : sC.x) + x;
+            int h = pY ? renderAreaHeight - y : sC.y; 
+            // iterate along the x axis
+            for (int i = x; i < xe; i++){
+                System.arraycopy(blankIntLine, 0, cells[i], y, h);
+                System.arraycopy(blankDoubleLine, 0, sSlopeGrid[i], y, h);
+                System.arraycopy(blankDoubleLine, 0, sSlopeOverflowGrid[i], y, h);
+                System.arraycopy(blankDoubleLine, 0, eSlopeGrid[i], y, h);
+                System.arraycopy(blankDoubleLine, 0, eSlopeOverflowGrid[i], y, h);
+            }
+        }
+        qRendered[q] = true;
+
         //AABBi bound = bounds.intersect(bounds.translate(sC.sum(new Vec2i(-1, -1))));
-        ArrayDeque<Vec2i> evaluationQueue = new ArrayDeque<>();
         Vec2i cI = sC.copy();
         GridUtils.orItem(cells, cI, CELLSTATE_SRAY);
         evaluationQueue.add(cI);
@@ -100,16 +158,16 @@ public class MonochromePointEmission {
 
             while (bounds.inBounds(cell)) {
                 int state = GridUtils.getItem(cells, cell);
-                Vec2i cTY = cell.sum(q.projectY());
-                Vec2i cTX = cell.sum(q.projectX());
-                Vec2i cRX = cell.sum(q.reflectX());
-                Vec2i cTV = cell.sum(q);
+                Vec2i cTY = cell.sum(dV.projectY());
+                Vec2i cTX = cell.sum(dV.projectX());
+                Vec2i cRX = cell.sum(dV.reflectX());
+                Vec2i cTV = cell.sum(dV);
                 if (opaqueCells.contains(cell)) {
                     // if the cell is opaque try to create new eRay
                     if ((state & CELLSTATE_SRAY) == 0 && !opaqueCells.contains(cTX) && !opaqueCells.contains(cRX)) {
                         // if the cell is an sRay, then we're done
                         GridUtils.orItem(cells, cTX, CELLSTATE_ERAY);
-                        double slope = (cTX.y + (q.y == -1 ? 1 : 0) - position.y) / (cTX.x + (q.x == -1 ? 1 : 0) - position.x);
+                        double slope = (cTX.y + (dV.y == -1 ? 1 : 0) - position.y) / (cTX.x + (dV.x == -1 ? 1 : 0) - position.x);
                         GridUtils.setItem(eSlopeGrid, cTX, slope);
                         GridUtils.setItem(eSlopeOverflowGrid, cTX, slope);
                     }
@@ -122,7 +180,7 @@ public class MonochromePointEmission {
                         double slopeOverflow = GridUtils.getItem(sSlopeOverflowGrid, cell);
                         if (Math.abs(slopeOverflow) > 1.0) {
                             GridUtils.setItem(sSlopeGrid, cTY, slope);
-                            GridUtils.setItem(sSlopeOverflowGrid, cTY, slopeOverflow - q.y * q.x);
+                            GridUtils.setItem(sSlopeOverflowGrid, cTY, slopeOverflow - dV.y * dV.x);
                             GridUtils.orItem(cells, cTY, CELLSTATE_SRAY);
                         } else if (Math.abs(slopeOverflow) < 1.0) {
                             GridUtils.setItem(sSlopeGrid, cTX, slope);
@@ -150,7 +208,7 @@ public class MonochromePointEmission {
                         double slopeOverflow = GridUtils.getItem(eSlopeOverflowGrid, cell);
                         if (Math.abs(slopeOverflow) > 1.0) {
                             GridUtils.setItem(eSlopeGrid, cTY, slope);
-                            GridUtils.setItem(eSlopeOverflowGrid, cTY, slopeOverflow - q.y * q.x);
+                            GridUtils.setItem(eSlopeOverflowGrid, cTY, slopeOverflow - dV.y * dV.x);
                             GridUtils.orItem(cells, cTY, CELLSTATE_ERAY);
                         } else if (Math.abs(slopeOverflow) < 1.0) {
                             GridUtils.setItem(eSlopeGrid, cTX, slope);
@@ -177,13 +235,13 @@ public class MonochromePointEmission {
                         if (!opaqueCells.contains(cTX) && opaqueCells.contains(cRX)) {
                             GridUtils.orItem(cells, cTX, CELLSTATE_SRAY);
                             evaluationQueue.add(cTX);
-                            double slope = (cTX.y + (q.y == -1 ? 1 : 0) - position.y) / (cTX.x + (q.x == -1 ? 1 : 0) - position.x);
+                            double slope = (cTX.y + (dV.y == -1 ? 1 : 0) - position.y) / (cTX.x + (dV.x == -1 ? 1 : 0) - position.x);
                             GridUtils.setItem(sSlopeGrid, cTX, slope);
                             GridUtils.setItem(sSlopeOverflowGrid, cTX, slope);
                         }
                     }
                 }
-                cell.y += q.y;
+                cell.y += dV.y;
             }
         }
 
