@@ -43,6 +43,10 @@ public class Vec2d {
         return Math.hypot(x, y);
     }
     
+    public double distance(double x, double y) {
+        return Math.hypot(this.x - x, this.y - y);
+    }
+    
     public double dot(Vec2d v) {
         return x*v.x + y*v.y;
     }
@@ -84,6 +88,10 @@ public class Vec2d {
     
     public Vec2i toVec2i(){
         return new Vec2i((int)x, (int)y);
+    }
+    
+    public Vec2d copy(){
+        return new Vec2d(x, y);
     }
     
 }

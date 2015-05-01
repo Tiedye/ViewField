@@ -38,7 +38,6 @@ public class Main extends JPanel {
             grid.setSolid(new Vec2i(2, y));
             grid.setSolid(new Vec2i(37, y));
         }*/
-        grid.reRenderScene();
         JFrame f = new JFrame("Jumbled Image");
         f.addWindowListener(new WindowAdapter() {
             @Override
@@ -50,8 +49,8 @@ public class Main extends JPanel {
 
             @Override
             public void mouseMoved(MouseEvent e) {
-                light.position = new Vec2d(e.getX()/grid.scale, e.getY()/grid.scale).sum(new Vec2d(1, 1));
-                grid.reRenderScene();
+                light.setPosition(e.getX()/grid.scale + 1, e.getY()/grid.scale + 1);
+                grid.updateGrid();
                 f.repaint();
             }
 
@@ -62,7 +61,7 @@ public class Main extends JPanel {
                 }else {
                     grid.setSolid(new Vec2d(e.getX()/grid.scale, e.getY()/grid.scale).toVec2i());
                 }
-                grid.reRenderScene();
+                grid.updateGrid();
                 f.repaint();
             }
             
@@ -74,7 +73,6 @@ public class Main extends JPanel {
             @Override
             public void mouseClicked(MouseEvent e) {
                 grid.addLight(new MonochromePointEmission(new Vec2d(e.getX()/grid.scale, e.getY()/grid.scale).sum(new Vec2d(1, 1)), 0.2));
-                grid.reRenderScene();
                 f.repaint();
             }
         

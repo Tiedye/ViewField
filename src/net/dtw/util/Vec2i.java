@@ -27,6 +27,10 @@ public class Vec2i {
         return new Vec2i(x + v.x, y + v.y);
     }
     
+    public Vec2i sum(int x, int y) {
+        return new Vec2i(x + this.x, y + this.y);
+    }
+    
     public Vec2i add(int x, int y) {
         return new Vec2i(this.x + x, this.y + y);
     }

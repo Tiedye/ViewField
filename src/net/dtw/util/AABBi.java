@@ -57,4 +57,8 @@ public class AABBi {
         return top - bottom;
     }
     
+    public AABBi copy(){
+        return new AABBi(top, bottom, right, left);
+    }
+    
 }
