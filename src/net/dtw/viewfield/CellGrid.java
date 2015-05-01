@@ -36,6 +36,7 @@ public class CellGrid extends Component {
 
     private HashSet<MonochromePointEmission> lights;
 
+    @SuppressWarnings("unchecked")
     public CellGrid(int width, int height, double scale) {
         this.scale = scale;
         // one cell buffer on every side

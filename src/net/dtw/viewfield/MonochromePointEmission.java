@@ -201,6 +201,7 @@ public class MonochromePointEmission {
         //AABBi bound = bounds.intersect(bounds.translate(sC.sum(new Vec2i(-1, -1))));
         Vec2i cI = sC.copy();
         GridUtils.orItem(cells, cI, CELLSTATE_SRAY);
+        evaluationQueue.clear();
         evaluationQueue.add(cI);
         GridUtils.setItem(sSlopeGrid, cI, 0.0);
         GridUtils.setItem(sSlopeOverflowGrid, cI, 0.0);

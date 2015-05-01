@@ -8,6 +8,7 @@ package net.dtw.viewfield;
 import java.awt.GridBagConstraints;
 import java.awt.event.*;
 import java.io.File;
+import java.util.HashSet;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import net.dtw.util.Vec2d;
@@ -23,8 +24,10 @@ public class Main extends JPanel {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        CellGrid grid = new CellGrid(75, 50, 15.0);
+        CellGrid grid = new CellGrid(30, 30, 15.0);
+        grid.setSolid(new Vec2i(6, 5));
         MonochromePointEmission light = new MonochromePointEmission(new Vec2d(5, 5), 0.2);
+        //light.setAttenuationFunction((d, v) -> Math.sin(d/2)*v);
         grid.addLight(light);
         //grid.addLight(new MonochromePointEmission(new Vec2d(5.5, 17.5), 1));
         /*grid.setSolid(new Vec2i(30, 30));
@@ -45,6 +48,20 @@ public class Main extends JPanel {
         });
         f.add("Center", grid);
         f.pack();
+        f.addKeyListener(new KeyAdapter() {
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                switch (e.getKeyCode()) {
+                    case KeyEvent.VK_R:
+                        light.renderQuadrant(MonochromePointEmission.Q1, new HashSet<>());
+                        break;
+                    default:
+                        
+                }
+            }
+
+        });
         grid.addMouseMotionListener(new MouseMotionAdapter() {
 
             @Override
@@ -72,7 +89,9 @@ public class Main extends JPanel {
 
             @Override
             public void mouseClicked(MouseEvent e) {
-                grid.addLight(new MonochromePointEmission(new Vec2d(e.getX()/grid.scale, e.getY()/grid.scale).sum(new Vec2d(1, 1)), 0.2));
+                MonochromePointEmission light = new MonochromePointEmission(new Vec2d(e.getX()/grid.scale, e.getY()/grid.scale).sum(new Vec2d(1, 1)), 0.2);
+                //light.setAttenuationFunction((d, v) -> Math.sin(d/2)*v);
+                grid.addLight(light);
                 f.repaint();
             }
         
