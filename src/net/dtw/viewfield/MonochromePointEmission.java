@@ -18,10 +18,10 @@ import net.dtw.util.Vec2i;
  */
 public class MonochromePointEmission {
     
-    private static final int Q1 = 3;
-    private static final int Q2 = 2;
-    private static final int Q3 = 0;
-    private static final int Q4 = 1;
+    public static final int Q1 = 3;
+    public static final int Q2 = 2;
+    public static final int Q3 = 0;
+    public static final int Q4 = 1;
     
     private static final Vec2i[] QDV = {new Vec2i(1, 1), new Vec2i(1, -1), new Vec2i(-1, -1), new Vec2i(-1, 1)};
 
@@ -245,6 +245,14 @@ public class MonochromePointEmission {
             }
         }
 
+    }
+    
+    public void transferAllQuadrants(double[][] grid){
+        for (int x = 0; x < renderAreaWidth; x++) {
+            for (int y = 0; y < renderAreaHeight; y++) {
+                grid[x][y] += 
+            }
+        }
     }
     
     public int getCellState(Vec2i p) {
