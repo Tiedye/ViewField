@@ -70,7 +70,7 @@ public class CellGrid extends Component {
     }
 
     public void setSolid(Vec2i rp) {
-        Vec2i p = rp.add(1, 1);
+        Vec2i p = rp.sum(1, 1);
         if (opaqueCells.contains(p)) return;
         opaqueCells.add(p);
         Vec2i[] cells = new Vec2i[1];
@@ -87,7 +87,7 @@ public class CellGrid extends Component {
     }
 
     public void setEmpty(Vec2i rp) {
-        Vec2i p = rp.add(1, 1);
+        Vec2i p = rp.sum(1, 1);
         if (!opaqueCells.contains(p)) return;
         opaqueCells.remove(p);
         Vec2i[] cells = new Vec2i[9];
@@ -112,10 +112,10 @@ public class CellGrid extends Component {
     }
 
     public void toggleCell(Vec2i p) {
-        if (opaqueCells.contains(p.add(1, 1))) {
-            opaqueCells.remove(p.add(1, 1));
+        if (opaqueCells.contains(p.sum(1, 1))) {
+            opaqueCells.remove(p.sum(1, 1));
         } else {
-            opaqueCells.add(p.add(1, 1));
+            opaqueCells.add(p.sum(1, 1));
         }
     }
 

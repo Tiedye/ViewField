@@ -31,10 +31,6 @@ public class Vec2i {
         return new Vec2i(x + this.x, y + this.y);
     }
     
-    public Vec2i add(int x, int y) {
-        return new Vec2i(this.x + x, this.y + y);
-    }
-    
     public Vec2i diff(Vec2i v) {
         return new Vec2i(x - v.x, y - v.y);
     }
