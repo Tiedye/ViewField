@@ -80,9 +80,8 @@ public class CellGrid extends Component {
             if (bounds.inBounds(cell))
             lightsToBeUpdated.addAll(GridUtils.getItem(gridOfConsequence, cell));
         }
-        System.out.println("Affected lights");
+        System.out.println("Fill: " + p);
         for (MonochromePointEmission light : lightsToBeUpdated) {
-            System.out.println(light);
             light.updateCells(cells, intensityGrid, gridOfConsequence, opaqueCells);
         }
     }
@@ -106,9 +105,8 @@ public class CellGrid extends Component {
             if (bounds.inBounds(cell))
             lightsToBeUpdated.addAll(GridUtils.getItem(gridOfConsequence, cell));
         }
-        System.out.println("Affected lights");
+        System.out.println("Empty: " + p);
         for(MonochromePointEmission light : lightsToBeUpdated) {
-            System.out.println(light);
             light.updateCells(cells, intensityGrid, gridOfConsequence, opaqueCells);
         }
     }
@@ -125,7 +123,22 @@ public class CellGrid extends Component {
         light.setRenderBounds(bounds);
         light.renderAll(opaqueCells);
         light.transferAll(intensityGrid, gridOfConsequence);
+        System.out.println("Add light:");
         lights.add(light);
+    }
+    
+    public void removeLight(MonochromePointEmission light) {
+        if (lights.contains(light)) {
+            light.clearAll(intensityGrid, gridOfConsequence);
+            lights.remove(light);
+        }
+    }
+    
+    public void removeLight(){
+        if (!lights.isEmpty()) {
+            MonochromePointEmission light = lights.stream().iterator().next();
+            removeLight(light);
+        }
     }
 
     public void updateGrid(){

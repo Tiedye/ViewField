@@ -302,6 +302,7 @@ public class MonochromePointEmission {
                 intensityCache[x][y] = attenuationFunction.execute(position.distance(x, y), intensity);
             }
         }
+        System.out.println(this + " rendered quadrant " + q);
     }
 
     public void transferAll(double[][] grid, HashSet<MonochromePointEmission>[][] gridOfConsequence) {
@@ -447,7 +448,7 @@ public class MonochromePointEmission {
 
     @Override
     public String toString() {
-        return "MonochromePointEmission{" + "id=" + id + ", position=" + position + '}';
+        return "MonochromePointEmission{" + "id=" + (id - 37) + ", position=" + position + '}';
     }
     
     

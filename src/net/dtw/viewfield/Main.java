@@ -5,14 +5,18 @@
  */
 package net.dtw.viewfield;
 
+import java.awt.Dimension;
 import java.awt.GridBagConstraints;
+import java.awt.Insets;
 import java.awt.event.*;
 import java.io.File;
 import java.util.HashSet;
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import net.dtw.util.Vec2d;
 import net.dtw.util.Vec2i;
+import org.netbeans.lib.awtextra.AbsoluteLayout;
 
 /**
  *
@@ -24,11 +28,11 @@ public class Main extends JPanel {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        CellGrid grid = new CellGrid(100, 100, 5.0);
+        CellGrid grid = new CellGrid(120, 120, 5.0);
         //grid.setSolid(new Vec2i(6, 5));
-        MonochromePointEmission light = new MonochromePointEmission(new Vec2d(5.5, 10.5), 0.2);
+        //MonochromePointEmission light = new MonochromePointEmission(new Vec2d(5.5, 10.5), 0.2);
         //light.setAttenuationFunction((d, v) -> Math.sin(d/2)*v);
-        grid.addLight(light);
+        //grid.addLight(light);
         //grid.addLight(new MonochromePointEmission(new Vec2d(5.5, 17.5), 1));
         /*grid.setSolid(new Vec2i(30, 30));
         grid.setSolid(new Vec2i(30, 31));
@@ -46,8 +50,6 @@ public class Main extends JPanel {
             @Override
             public void windowClosing(WindowEvent e) {System.exit(0);}
         });
-        f.add("Center", grid);
-        f.pack();
         f.addKeyListener(new KeyAdapter() {
 
             @Override
@@ -67,9 +69,9 @@ public class Main extends JPanel {
 
             @Override
             public void mouseMoved(MouseEvent e) {
-                light.setPosition(e.getX()/grid.scale + 1, e.getY()/grid.scale + 1);
-                grid.updateGrid();
-                f.repaint();
+                //light.setPosition(e.getX()/grid.scale + 1, e.getY()/grid.scale + 1);
+                //grid.updateGrid();
+                //f.repaint();
             }
 
             @Override
@@ -105,6 +107,24 @@ public class Main extends JPanel {
             }
         
         });
+        
+        JButton button = new JButton("Remove Light");
+        button.addMouseListener(new MouseAdapter() {
+
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                grid.removeLight();
+                f.repaint();
+            }
+            
+        });
+        Insets insets = f.getInsets();
+        Dimension size = button.getPreferredSize();
+        button.setBounds(5 + insets.left, 5 + insets.top, size.width, size.height);
+        f.add(button);
+        f.add(grid);
+        f.pack();
+        
         f.setVisible(true);
         // Create grid object
         // set wall locations
