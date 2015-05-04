@@ -43,13 +43,13 @@ public class CellGrid extends Component {
         this.width = width + 2;
         this.height = height + 2;
         bounds = new AABBi(height + 1, 1, width + 1, 1);
-        opaqueCells = new HashSet<>();
+        opaqueCells = new HashSet<>(128);
         intensityGrid = new double[width + 2][height + 2];
         lights = new HashSet<>();
         gridOfConsequence = new HashSet[width + 2][height + 2];
         for (int x = 0; x < width + 2; x++) {
             for (int y = 0; y < height + 2; y++) {
-                gridOfConsequence[x][y] = new HashSet<>();
+                gridOfConsequence[x][y] = new HashSet<>(64);
             }
         }
     }
