@@ -80,7 +80,7 @@ public class CellGrid extends Component {
             if (bounds.inBounds(cell))
             lightsToBeUpdated.addAll(GridUtils.getItem(gridOfConsequence, cell));
         }
-        System.out.println("Fill: " + p);
+        //System.out.println("Fill: " + p);
         for (MonochromePointEmission light : lightsToBeUpdated) {
             light.updateCells(cells, intensityGrid, gridOfConsequence, opaqueCells);
         }

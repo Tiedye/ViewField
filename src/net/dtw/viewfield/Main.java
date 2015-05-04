@@ -28,7 +28,7 @@ public class Main extends JPanel {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        CellGrid grid = new CellGrid(120, 120, 5.0);
+        CellGrid grid = new CellGrid(120, 120, 8.0);
         //grid.setSolid(new Vec2i(6, 5));
         //MonochromePointEmission light = new MonochromePointEmission(new Vec2d(5.5, 10.5), 0.2);
         //light.setAttenuationFunction((d, v) -> Math.sin(d/2)*v);
@@ -55,10 +55,6 @@ public class Main extends JPanel {
             @Override
             public void keyPressed(KeyEvent e) {
                 switch (e.getKeyCode()) {
-                    case KeyEvent.VK_R:
-        //                light.renderQuadrant(MonochromePointEmission.Q1, new HashSet<>());
-                        grid.updateGrid();
-                        break;
                     default:
                         
                 }
