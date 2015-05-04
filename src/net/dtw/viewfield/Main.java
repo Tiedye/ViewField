@@ -24,9 +24,9 @@ public class Main extends JPanel {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        CellGrid grid = new CellGrid(30, 30, 15.0);
-        grid.setSolid(new Vec2i(6, 5));
-        MonochromePointEmission light = new MonochromePointEmission(new Vec2d(5, 5), 0.2);
+        CellGrid grid = new CellGrid(100, 100, 5.0);
+        //grid.setSolid(new Vec2i(6, 5));
+        MonochromePointEmission light = new MonochromePointEmission(new Vec2d(5.5, 10.5), 0.2);
         //light.setAttenuationFunction((d, v) -> Math.sin(d/2)*v);
         grid.addLight(light);
         //grid.addLight(new MonochromePointEmission(new Vec2d(5.5, 17.5), 1));
@@ -54,7 +54,8 @@ public class Main extends JPanel {
             public void keyPressed(KeyEvent e) {
                 switch (e.getKeyCode()) {
                     case KeyEvent.VK_R:
-                        light.renderQuadrant(MonochromePointEmission.Q1, new HashSet<>());
+        //                light.renderQuadrant(MonochromePointEmission.Q1, new HashSet<>());
+                        grid.updateGrid();
                         break;
                     default:
                         
@@ -82,17 +83,25 @@ public class Main extends JPanel {
                 f.repaint();
             }
             
-            
-            
         });
         grid.addMouseListener(new MouseAdapter() {
 
             @Override
             public void mouseClicked(MouseEvent e) {
-                MonochromePointEmission light = new MonochromePointEmission(new Vec2d(e.getX()/grid.scale, e.getY()/grid.scale).sum(new Vec2d(1, 1)), 0.2);
-                //light.setAttenuationFunction((d, v) -> Math.sin(d/2)*v);
-                grid.addLight(light);
-                f.repaint();
+                if (e.getButton() == MouseEvent.BUTTON3) {
+                    MonochromePointEmission light = new MonochromePointEmission(new Vec2d(e.getX()/grid.scale + 1, e.getY()/grid.scale + 1), 0.2);
+                    //light.setAttenuationFunction((d, v) -> Math.sin(d)*v);
+                    grid.addLight(light);
+                    f.repaint();
+                } else if (e.getButton() == MouseEvent.BUTTON1) {
+                    if (e.isControlDown()) {
+                        grid.setEmpty(new Vec2d(e.getX()/grid.scale, e.getY()/grid.scale).toVec2i());
+                    }else {
+                        grid.setSolid(new Vec2d(e.getX()/grid.scale, e.getY()/grid.scale).toVec2i());
+                    }
+                    grid.updateGrid();
+                    f.repaint();
+                }
             }
         
         });

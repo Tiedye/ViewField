@@ -69,19 +69,29 @@ public class CellGrid extends Component {
         return bounds.copy();
     }
 
-    public void setSolid(Vec2i p) {
-        opaqueCells.add(p.add(1, 1));
+    public void setSolid(Vec2i rp) {
+        Vec2i p = rp.add(1, 1);
+        if (opaqueCells.contains(p)) return;
+        opaqueCells.add(p);
         Vec2i[] cells = new Vec2i[1];
         cells[0] = p;
-        lights.addAll(GridUtils.getItem(gridOfConsequence, p));
-        for(MonochromePointEmission light : lights) {
+        HashSet<MonochromePointEmission> lightsToBeUpdated = new HashSet<>();
+        for (Vec2i cell:cells) {
+            if (bounds.inBounds(cell))
+            lightsToBeUpdated.addAll(GridUtils.getItem(gridOfConsequence, cell));
+        }
+        System.out.println("Affected lights");
+        for (MonochromePointEmission light : lightsToBeUpdated) {
+            System.out.println(light);
             light.updateCells(cells, intensityGrid, gridOfConsequence, opaqueCells);
         }
     }
 
-    public void setEmpty(Vec2i p) {
-        opaqueCells.remove(p.add(1, 1));
-        Vec2i[] cells = new Vec2i[8];
+    public void setEmpty(Vec2i rp) {
+        Vec2i p = rp.add(1, 1);
+        if (!opaqueCells.contains(p)) return;
+        opaqueCells.remove(p);
+        Vec2i[] cells = new Vec2i[9];
         cells[0] = p.sum(0, 1);
         cells[1] = p.sum(1, 1);
         cells[2] = p.sum(1, 0);
@@ -90,11 +100,15 @@ public class CellGrid extends Component {
         cells[5] = p.sum(-1, -1);
         cells[6] = p.sum(-1, 0);
         cells[7] = p.sum(-1, 1);
+        cells[8] = p;
         HashSet<MonochromePointEmission> lightsToBeUpdated = new HashSet<>();
         for (Vec2i cell:cells) {
+            if (bounds.inBounds(cell))
             lightsToBeUpdated.addAll(GridUtils.getItem(gridOfConsequence, cell));
         }
+        System.out.println("Affected lights");
         for(MonochromePointEmission light : lightsToBeUpdated) {
+            System.out.println(light);
             light.updateCells(cells, intensityGrid, gridOfConsequence, opaqueCells);
         }
     }
@@ -148,6 +162,8 @@ public class CellGrid extends Component {
                     g.setColor(Color.white);
                 }
                 g.fillRect((int) (x * scale), (int) (y * scale), (int) scale, (int) scale);
+                //g.setColor(new Color(0.5f, 0.0f, 0.0f));
+                //g.drawRect((int) (x * scale), (int) (y * scale), (int) scale, (int) scale);
             }
         }
     }

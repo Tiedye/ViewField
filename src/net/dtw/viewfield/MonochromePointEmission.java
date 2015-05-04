@@ -81,7 +81,7 @@ public class MonochromePointEmission {
         nextIntensity = Double.NaN;
         qRendered = new boolean[4];
         evaluationQueue = new ArrayDeque<>();
-        attenuationFunction = (d, v) -> d < 1.0 ? v: v / d;
+        attenuationFunction = (d, v) -> d < 0.5 ? v: v / (d + 0.5);
         changeQueued = false;
     }
 
@@ -118,9 +118,7 @@ public class MonochromePointEmission {
     }
 
     public void setPosition(double x, double y) {
-        if (nextPosition == null) nextPosition = new Vec2d();
-        nextPosition.x = x;
-        nextPosition.y = y;
+        nextPosition = new Vec2d(x, y);
         changeQueued = true;
     }
     
@@ -205,13 +203,10 @@ public class MonochromePointEmission {
         evaluationQueue.add(cI);
         GridUtils.setItem(sSlopeGrid, cI, 0.0);
         GridUtils.setItem(sSlopeOverflowGrid, cI, 0.0);
+        GridUtils.orItem(cells, cI, CELLSTATE_LIT);
 
         while (!evaluationQueue.isEmpty()) {
             Vec2i cell = evaluationQueue.remove();
-
-            if (!bounds.inBounds(cell)) {
-                break;
-            }
 
             while (bounds.inBounds(cell)) {
                 int state = GridUtils.getItem(cells, cell);
@@ -303,6 +298,7 @@ public class MonochromePointEmission {
         }
         for (int x = rAX; x < rAWX; x++) {
             for (int y = rAY; y < rAHY; y++) {
+                if ((cells[x][y] & CELLSTATE_LIT) != 0)
                 intensityCache[x][y] = attenuationFunction.execute(position.distance(x, y), intensity);
             }
         }
@@ -414,9 +410,12 @@ public class MonochromePointEmission {
         Vec2i pR = position.toVec2i();
         
         for (Vec2i cell:cellsToUpdate){
-            rQ[((cell.x >= pR.x) ? 0b10 : 0) + ((cell.y >= pR.y) ? 0b01 : 0)] = true;
+            rQ[Q1] = cell.x >= pR.x && cell.y >= pR.y;
+            rQ[Q2] = cell.x >= pR.x && cell.y <= pR.y;
+            rQ[Q3] = cell.x <= pR.x && cell.y <= pR.y;
+            rQ[Q4] = cell.x <= pR.x && cell.y >= pR.y;
         }
-        
+        // TODO redo cell considerations
         for(int i = 0; i < 4; i++) {
             if (rQ[i]) {
                 clearQuadrant(i, grid, gridOfConsequence);
@@ -445,5 +444,12 @@ public class MonochromePointEmission {
         }
         return true;
     }
+
+    @Override
+    public String toString() {
+        return "MonochromePointEmission{" + "id=" + id + ", position=" + position + '}';
+    }
+    
+    
 
 }
